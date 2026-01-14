@@ -6,21 +6,24 @@ A beautiful, standalone Windows desktop widget that displays your Claude.ai usag
 
 ## Features
 
-- 🎯 **Real-time Usage Tracking** - Monitor both session and weekly usage limits
-- 📊 **Visual Progress Bars** - Clean, gradient progress indicators
-- ⏱️ **Countdown Timers** - Circular timers showing time until reset
-- 🔄 **Auto-refresh** - Updates every 5 minutes automatically
-- 🎨 **Modern UI** - Sleek, draggable widget with dark theme
-- 🔒 **Secure** - Encrypted credential storage
-- 📍 **Always on Top** - Stays visible across all workspaces
-- 💾 **System Tray** - Minimizes to tray for easy access
+- **Real-time Usage Tracking** - Monitor session, weekly, and Sonnet usage limits
+- **Usage History Graph** - Visual chart showing usage trends over time
+- **Visual Progress Bars** - Clean, gradient progress indicators
+- **Countdown Timers** - Circular timers showing time until reset
+- **Auto-refresh** - Updates automatically (configurable interval)
+- **Modern UI** - Sleek, draggable widget with dark theme
+- **Secure** - Encrypted credential storage
+- **Always on Top** - Stays visible across all workspaces
+- **System Tray** - Minimizes to tray for easy access
+- **Configurable** - Edit config.json to customize behavior
+- **Portable** - Single exe, no installation required
 
 ## Installation
 
-### Download Pre-built Release
-1. Download the latest `Claude-Usage-Widget-Setup.exe` from [Releases](https://github.com/SlavomirDurej/claude-usage-widget/releases)
-2. Run the installer
-3. Launch "Claude Usage Widget" from Start Menu
+### Download Portable Exe
+1. Download the latest `Claude Usage Widget-Windows-Portable.exe` from [Releases](https://github.com/SlavomirDurej/claude-usage-widget/releases)
+2. Run the exe - no installation needed
+3. Optionally copy to a permanent location
 
 ### Build from Source
 
@@ -41,11 +44,14 @@ npm install
 # Run in development mode
 npm start
 
-# Build installer for Windows
+# Build portable exe for Windows
 npm run build:win
+
+# Build for Mac (requires macOS)
+npm run build:mac
 ```
 
-The installer will be created in the `dist/` folder.
+The portable exe will be created in the `dist/` folder.
 
 ## Usage
 
@@ -61,8 +67,9 @@ The installer will be created in the `dist/` folder.
 
 - **Drag** - Click and drag the title bar to move the widget
 - **Refresh** - Click the refresh icon to update data immediately
+- **Graph** - Click the graph icon to toggle usage history chart
 - **Minimize** - Click the minus icon to hide to system tray
-- **Close** - Click the X to minimize to tray (doesn't exit)
+- **Close** - Click the X to exit the application
 
 ### System Tray Menu
 
@@ -70,8 +77,37 @@ Right-click the tray icon for:
 - Show/Hide widget
 - Refresh usage data
 - Re-login (if session expires)
-- Settings (coming soon)
 - Exit application
+
+## Configuration
+
+Edit `config.json` in the app directory to customize:
+
+```json
+{
+  "refreshIntervalMinutes": 5,
+  "chartDays": 7,
+  "historyRetentionDays": 30,
+  "silentLoginTimeoutSeconds": 15,
+  "showWeeklySonnet": true
+}
+```
+
+| Setting | Description | Default |
+|---------|-------------|---------|
+| `refreshIntervalMinutes` | How often to auto-refresh usage data | 5 |
+| `chartDays` | Number of days to show in usage graph | 7 |
+| `historyRetentionDays` | How long to keep usage history | 30 |
+| `silentLoginTimeoutSeconds` | Timeout for auto-login attempts | 15 |
+| `showWeeklySonnet` | Show/hide Weekly Sonnet usage row | true |
+
+Restart the app after making changes.
+
+### Auto-start on Windows Boot
+
+1. Press `Win + R`
+2. Type `shell:startup` and press Enter
+3. Create a shortcut to the widget executable in this folder
 
 ## Understanding the Display
 
@@ -83,25 +119,16 @@ Right-click the tray icon for:
   - Orange: High usage (75-89%)
   - Red: Critical usage (90-100%)
 
-### Weekly Limit
+### Weekly All Models
 - **Progress Bar** - Shows weekly usage from 0-100%
-- **Timer** - Time remaining until weekly reset (Wednesdays 7:00 AM)
-- **Same color coding** as session usage
+- **Timer** - Time remaining until weekly reset
+- Blue color theme
 
-## Configuration
-
-### Auto-start on Windows Boot
-
-1. Press `Win + R`
-2. Type `shell:startup` and press Enter
-3. Create a shortcut to the widget executable in this folder
-
-### Custom Refresh Interval
-
-Edit `src/renderer/app.js`:
-```javascript
-const UPDATE_INTERVAL = 5 * 60 * 1000; // Change to your preference (in milliseconds)
-```
+### Weekly Sonnet
+- **Progress Bar** - Shows Sonnet-specific weekly usage
+- **Timer** - Time remaining until reset
+- Green color theme
+- Can be hidden via config
 
 ## Troubleshooting
 
@@ -116,9 +143,9 @@ const UPDATE_INTERVAL = 5 * 60 * 1000; // Change to your preference (in millisec
 - Ensure Claude.ai is accessible in your region
 - Try re-logging in from the system tray menu
 
-### Widget position not saving
-- Window position is now saved automatically when you drag it
-- Position will be restored when you restart the app
+### GPU cache errors on startup
+- This has been fixed - the app now disables GPU shader disk cache
+- If you still see issues, ensure no other instances are running
 
 ### Build errors
 ```bash
@@ -139,7 +166,7 @@ npm install
 **Built with:**
 - Electron 28.0.0
 - Pure JavaScript (no framework overhead)
-- Native Node.js APIs
+- Chart.js for usage graphs
 - electron-store for secure storage
 
 **API Endpoint:**
@@ -147,20 +174,21 @@ npm install
 https://claude.ai/api/organizations/{org_id}/usage
 ```
 
-**Storage Location:**
+**Data Storage:**
 ```
-%APPDATA%/claude-usage-widget/config.json (encrypted)
+%APPDATA%/claude-usage-widget/
 ```
 
 ## Roadmap
 
-- [ ] macOS support
+- [x] Remember window position
+- [x] Usage history graphs
+- [x] Configurable settings
+- [x] Portable exe build
+- [ ] macOS distribution
 - [ ] Linux support
 - [ ] Custom themes
 - [ ] Notification alerts at usage thresholds
-- [x] Remember window position
-- [ ] Settings panel
-- [ ] Usage history graphs
 - [ ] Multiple account support
 - [ ] Keyboard shortcuts
 
@@ -185,4 +213,4 @@ If you encounter issues:
 
 ---
 
-Made with ❤️ for the Claude.ai community
+Made with love for the Claude.ai community
