@@ -41,7 +41,7 @@
     },
     "mac": {
       "target": "zip",
-      "icon": "assets/logo.png",
+      "icon": "assets/icon.icns",
       "category": "public.app-category.utilities",
       "artifactName": "${productName}-Mac.${ext}"
     },
