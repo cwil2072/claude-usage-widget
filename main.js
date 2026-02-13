@@ -64,6 +64,7 @@ function storeUsageHistory(data) {
 let mainWindow = null;
 let loginWindow = null;
 let silentLoginWindow = null;
+let silentLoginInProgress = false;
 let tray = null;
 
 // Window configuration
@@ -112,6 +113,22 @@ function createMainWindow() {
     mainWindow = null;
   });
 
+  // Navigation guards — prevent mainWindow from ever leaving the local HTML
+  mainWindow.webContents.on('will-navigate', (event, url) => {
+    if (!url.startsWith('file://')) {
+      console.log('[Main] Blocked mainWindow navigation to:', url);
+      event.preventDefault();
+    }
+  });
+
+  mainWindow.webContents.setWindowOpenHandler(({ url }) => {
+    console.log('[Main] Blocked new window from mainWindow, opening externally:', url);
+    if (url.startsWith('https://') || url.startsWith('http://')) {
+      shell.openExternal(url);
+    }
+    return { action: 'deny' };
+  });
+
   // Development tools
   if (process.env.NODE_ENV === 'development') {
     mainWindow.webContents.openDevTools({ mode: 'detach' });
@@ -119,6 +136,11 @@ function createMainWindow() {
 }
 
 function createLoginWindow() {
+  if (loginWindow && !loginWindow.isDestroyed()) {
+    loginWindow.focus();
+    return;
+  }
+
   loginWindow = new BrowserWindow({
     width: 800,
     height: 700,
@@ -232,6 +254,11 @@ function createLoginWindow() {
 
 // Attempt silent login in a hidden browser window
 async function attemptSilentLogin() {
+  if (silentLoginInProgress) {
+    console.log('[Main] Silent login already in progress, skipping');
+    return false;
+  }
+  silentLoginInProgress = true;
   console.log('[Main] Attempting silent login...');
 
   // Notify renderer that we're trying to auto-login
@@ -296,6 +323,7 @@ async function attemptSilentLogin() {
             }
 
             console.log('[Main] Silent login successful!');
+            silentLoginInProgress = false;
             store.set('sessionKey', sessionKey);
             store.set('organizationId', orgId);
 
@@ -317,17 +345,31 @@ async function attemptSilentLogin() {
       const url = silentLoginWindow.webContents.getURL();
       console.log('[Main] Silent login page loaded:', url);
 
+      // Log all cookie names for diagnostics (helps detect cookie format changes)
+      try {
+        const allCookies = await session.defaultSession.cookies.get({ url: 'https://claude.ai' });
+        const cookieNames = allCookies.map(c => c.name);
+        console.log('[Main] Silent login: claude.ai cookies:', cookieNames.join(', '));
+      } catch (err) {
+        console.log('[Main] Silent login: failed to read cookies:', err.message);
+      }
+
       if (url.includes('claude.ai')) {
         await checkLoginStatus();
       }
     });
 
     // Also check on navigation
-    silentLoginWindow.webContents.on('did-navigate', async (event, url) => {
-      console.log('[Main] Silent login navigated to:', url);
+    silentLoginWindow.webContents.on('did-navigate', async (event, url, httpResponseCode) => {
+      console.log('[Main] Silent login navigated to:', url, '(status:', httpResponseCode + ')');
       if (url.includes('claude.ai')) {
         await checkLoginStatus();
       }
+    });
+
+    // Log load failures
+    silentLoginWindow.webContents.on('did-fail-load', (event, errorCode, errorDescription, validatedURL) => {
+      console.error('[Main] Silent login failed to load:', validatedURL, 'error:', errorCode, errorDescription);
     });
 
     // Poll periodically
@@ -340,10 +382,11 @@ async function attemptSilentLogin() {
       }
     }, 1000);
 
-    // Timeout - if silent login doesn't work, fall back to visible login
+    // Timeout - if silent login doesn't work, notify renderer to show login button
     setTimeout(() => {
       if (!hasLoggedIn) {
-        console.log('[Main] Silent login timeout, falling back to visible login...');
+        console.log('[Main] Silent login timeout');
+        silentLoginInProgress = false;
         if (loginCheckInterval) {
           clearInterval(loginCheckInterval);
           loginCheckInterval = null;
@@ -353,12 +396,11 @@ async function attemptSilentLogin() {
         }
 
         // Notify renderer that silent login failed
+        // Renderer shows "Login Required" screen with a "Log In" button — let user click it
         if (mainWindow) {
           mainWindow.webContents.send('silent-login-failed');
         }
 
-        // Open visible login window
-        createLoginWindow();
         resolve(false);
       }
     }, SILENT_LOGIN_TIMEOUT);
@@ -369,6 +411,7 @@ async function attemptSilentLogin() {
         loginCheckInterval = null;
       }
       silentLoginWindow = null;
+      silentLoginInProgress = false;
     });
   });
 }
