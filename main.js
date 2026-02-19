@@ -109,7 +109,32 @@ let mainWindow = null;
 let loginWindow = null;
 let silentLoginWindow = null;
 let silentLoginInProgress = false;
+let nextSilentLoginAttemptAt = 0;
+let silentLoginRetryTimer = null;
 let tray = null;
+const SILENT_LOGIN_RETRY_INTERVAL_MS = 5 * 60 * 1000;
+
+function clearSilentLoginRetryTimer() {
+  if (silentLoginRetryTimer) {
+    clearTimeout(silentLoginRetryTimer);
+    silentLoginRetryTimer = null;
+  }
+}
+
+function scheduleSilentLoginRetry() {
+  clearSilentLoginRetryTimer();
+
+  const delay = Math.max(0, nextSilentLoginAttemptAt - Date.now());
+  if (!delay) {
+    return;
+  }
+
+  console.log(`[Main] Scheduling silent login retry in ${Math.ceil(delay / 1000)}s`);
+  silentLoginRetryTimer = setTimeout(() => {
+    silentLoginRetryTimer = null;
+    attemptSilentLogin();
+  }, delay);
+}
 
 // Window configuration
 const WIDGET_WIDTH = 480;
@@ -297,6 +322,13 @@ async function attemptSilentLogin() {
     console.log('[Main] Silent login already in progress, skipping');
     return false;
   }
+
+  if (Date.now() < nextSilentLoginAttemptAt) {
+    console.log('[Main] Silent login in cooldown, skipping immediate retry');
+    scheduleSilentLoginRetry();
+    return false;
+  }
+
   silentLoginInProgress = true;
   console.log('[Main] Attempting silent login...');
 
@@ -356,6 +388,8 @@ async function attemptSilentLogin() {
 
             console.log('[Main] Silent login successful!');
             silentLoginInProgress = false;
+            nextSilentLoginAttemptAt = 0;
+            clearSilentLoginRetryTimer();
             store.set('sessionKey', sessionKey);
             if (orgId) {
               store.set('organizationId', orgId);
@@ -421,18 +455,14 @@ async function attemptSilentLogin() {
       if (!hasLoggedIn) {
         console.log('[Main] Silent login timeout');
         silentLoginInProgress = false;
+        nextSilentLoginAttemptAt = Date.now() + SILENT_LOGIN_RETRY_INTERVAL_MS;
+        scheduleSilentLoginRetry();
         if (loginCheckInterval) {
           clearInterval(loginCheckInterval);
           loginCheckInterval = null;
         }
         if (silentLoginWindow) {
           silentLoginWindow.close();
-        }
-
-        // Notify renderer that silent login failed
-        // Renderer shows "Login Required" screen with a "Log In" button — let user click it
-        if (mainWindow) {
-          mainWindow.webContents.send('silent-login-failed');
         }
 
         resolve(false);
