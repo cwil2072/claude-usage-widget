@@ -8,13 +8,13 @@ let graphVisible = false;
 let lastRefreshTime = null;
 let refreshedAgoInterval = null;
 let appConfig = null;
+let silentReauthInProgress = false;
 
 // DOM elements
 const elements = {
     loadingContainer: document.getElementById('loadingContainer'),
     loginContainer: document.getElementById('loginContainer'),
     noUsageContainer: document.getElementById('noUsageContainer'),
-    autoLoginContainer: document.getElementById('autoLoginContainer'),
     mainContent: document.getElementById('mainContent'),
     loginBtn: document.getElementById('loginBtn'),
     refreshBtn: document.getElementById('refreshBtn'),
@@ -63,7 +63,7 @@ async function init() {
         elements.sonnetSection.style.display = 'none';
     }
 
-    if (credentials.sessionKey && credentials.organizationId) {
+    if (credentials.sessionKey) {
         showMainContent();
         await fetchUsageData();
         startAutoUpdate();
@@ -118,6 +118,7 @@ function setupEventListeners() {
     // Listen for login success
     window.electronAPI.onLoginSuccess(async (data) => {
         console.log('Renderer received login-success event');
+        silentReauthInProgress = false;
         credentials = data;
         await window.electronAPI.saveCredentials(data);
         console.log('Credentials saved, showing main content');
@@ -141,12 +142,13 @@ function setupEventListeners() {
     // Listen for silent login attempts
     window.electronAPI.onSilentLoginStarted(() => {
         console.log('Silent login started...');
-        showAutoLoginAttempt();
+        silentReauthInProgress = true;
     });
 
     // Listen for silent login failures (falls back to visible login)
     window.electronAPI.onSilentLoginFailed(() => {
         console.log('Silent login failed, manual login required');
+        silentReauthInProgress = false;
         showLoginRequired();
     });
 }
@@ -155,7 +157,11 @@ function setupEventListeners() {
 async function fetchUsageData() {
     console.log('fetchUsageData called');
 
-    if (!credentials.sessionKey || !credentials.organizationId) {
+    if (!credentials.sessionKey) {
+        if (silentReauthInProgress) {
+            // Keep current UI visible while silent reauth is in progress.
+            return;
+        }
         console.log('Missing credentials, showing login');
         showLoginRequired();
         return;
@@ -170,9 +176,13 @@ async function fetchUsageData() {
         console.error('Error fetching usage data:', error);
         if (error.message.includes('SessionExpired') || error.message.includes('Unauthorized')) {
             // Session expired - silent login attempt is in progress
-            // Show auto-login UI while waiting
+            // Keep current UI while waiting for silent reauth
+            silentReauthInProgress = true;
             credentials = { sessionKey: null, organizationId: null };
-            showAutoLoginAttempt();
+            return;
+        } else if (silentReauthInProgress && error.message.includes('Missing credentials')) {
+            // Main process cleared stored credentials while attempting silent reauth.
+            return;
         } else {
             showError('Failed to fetch usage data');
         }
@@ -395,7 +405,6 @@ function showLoading() {
     elements.loadingContainer.style.display = 'block';
     elements.loginContainer.style.display = 'none';
     elements.noUsageContainer.style.display = 'none';
-    elements.autoLoginContainer.style.display = 'none';
     elements.mainContent.style.display = 'none';
 }
 
@@ -403,7 +412,6 @@ function showLoginRequired() {
     elements.loadingContainer.style.display = 'none';
     elements.loginContainer.style.display = 'flex'; // Use flex to preserve centering
     elements.noUsageContainer.style.display = 'none';
-    elements.autoLoginContainer.style.display = 'none';
     elements.mainContent.style.display = 'none';
     elements.statusBar.style.display = 'none';
     stopAutoUpdate();
@@ -413,24 +421,13 @@ function showNoUsage() {
     elements.loadingContainer.style.display = 'none';
     elements.loginContainer.style.display = 'none';
     elements.noUsageContainer.style.display = 'flex';
-    elements.autoLoginContainer.style.display = 'none';
     elements.mainContent.style.display = 'none';
-}
-
-function showAutoLoginAttempt() {
-    elements.loadingContainer.style.display = 'none';
-    elements.loginContainer.style.display = 'none';
-    elements.noUsageContainer.style.display = 'none';
-    elements.autoLoginContainer.style.display = 'flex';
-    elements.mainContent.style.display = 'none';
-    stopAutoUpdate();
 }
 
 function showMainContent() {
     elements.loadingContainer.style.display = 'none';
     elements.loginContainer.style.display = 'none';
     elements.noUsageContainer.style.display = 'none';
-    elements.autoLoginContainer.style.display = 'none';
     elements.mainContent.style.display = 'block';
     elements.statusBar.style.display = 'block';
     if (!lastRefreshTime) {

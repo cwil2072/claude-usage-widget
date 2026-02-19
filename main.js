@@ -30,6 +30,7 @@ function loadConfig() {
 }
 
 const config = loadConfig();
+const CLAUDE_USER_AGENT = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36';
 
 const store = new Store({
   encryptionKey: 'claude-widget-secure-key-2024'
@@ -41,6 +42,49 @@ const WIDGET_HEIGHT_WITHOUT_SONNET = 170;
 
 function getWidgetHeight() {
   return config.showWeeklySonnet ? WIDGET_HEIGHT_WITH_SONNET : WIDGET_HEIGHT_WITHOUT_SONNET;
+}
+
+function getClaudeAuthHeaders(sessionKey) {
+  return {
+    'Cookie': `sessionKey=${sessionKey}`,
+    'User-Agent': CLAUDE_USER_AGENT
+  };
+}
+
+async function fetchOrganizations(sessionKey) {
+  const response = await axios.get('https://claude.ai/api/organizations', {
+    headers: getClaudeAuthHeaders(sessionKey)
+  });
+
+  if (!Array.isArray(response.data) || response.data.length === 0) {
+    throw new Error('No organizations returned');
+  }
+
+  return response.data;
+}
+
+async function resolveOrganizationId(sessionKey, preferredOrganizationId = null) {
+  const organizations = await fetchOrganizations(sessionKey);
+
+  if (preferredOrganizationId) {
+    const matchingOrg = organizations.find(org =>
+      org.uuid === preferredOrganizationId || org.id === preferredOrganizationId
+    );
+    if (matchingOrg) {
+      return matchingOrg.uuid || matchingOrg.id;
+    }
+  }
+
+  return organizations[0].uuid || organizations[0].id;
+}
+
+async function fetchUsage(sessionKey, organizationId) {
+  return axios.get(
+    `https://claude.ai/api/organizations/${organizationId}/usage`,
+    {
+      headers: getClaudeAuthHeaders(sessionKey)
+    }
+  );
 }
 
 function storeUsageHistory(data) {
@@ -171,25 +215,18 @@ function createLoginWindow() {
         const sessionKey = cookies[0].value;
         console.log('Session key found, attempting to get org ID...');
 
-        // Fetch org ID from API
+        // Try to resolve org ID, but don't block login success on this step.
         let orgId = null;
         try {
-          const response = await axios.get('https://claude.ai/api/organizations', {
-            headers: {
-              'Cookie': `sessionKey=${sessionKey}`,
-              'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-            }
-          });
-
-          if (response.data && Array.isArray(response.data) && response.data.length > 0) {
-            orgId = response.data[0].uuid || response.data[0].id;
+          orgId = await resolveOrganizationId(sessionKey, store.get('organizationId'));
+          if (orgId) {
             console.log('Org ID fetched from API');
           }
         } catch (err) {
-          console.log('API not ready yet:', err.message);
+          console.log('Org ID not ready yet, continuing with session only:', err.message);
         }
 
-        if (sessionKey && orgId) {
+        if (sessionKey) {
           hasLoggedIn = true;
           if (loginCheckInterval) {
             clearInterval(loginCheckInterval);
@@ -198,7 +235,9 @@ function createLoginWindow() {
 
           console.log('Sending login-success to main window...');
           store.set('sessionKey', sessionKey);
-          store.set('organizationId', orgId);
+          if (orgId) {
+            store.set('organizationId', orgId);
+          }
 
           if (mainWindow) {
             mainWindow.webContents.send('login-success', { sessionKey, organizationId: orgId });
@@ -297,25 +336,18 @@ async function attemptSilentLogin() {
           const sessionKey = cookies[0].value;
           console.log('[Main] Silent login: Session key found, attempting to get org ID...');
 
-          // Fetch org ID from API
+          // Try to resolve org ID, but accept session-only success.
           let orgId = null;
           try {
-            const response = await axios.get('https://claude.ai/api/organizations', {
-              headers: {
-                'Cookie': `sessionKey=${sessionKey}`,
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-              }
-            });
-
-            if (response.data && Array.isArray(response.data) && response.data.length > 0) {
-              orgId = response.data[0].uuid || response.data[0].id;
+            orgId = await resolveOrganizationId(sessionKey, store.get('organizationId'));
+            if (orgId) {
               console.log('[Main] Silent login: Org ID fetched from API');
             }
           } catch (err) {
-            console.log('[Main] Silent login: API not ready yet:', err.message);
+            console.log('[Main] Silent login: org lookup not ready yet:', err.message);
           }
 
-          if (sessionKey && orgId) {
+          if (sessionKey) {
             hasLoggedIn = true;
             if (loginCheckInterval) {
               clearInterval(loginCheckInterval);
@@ -325,7 +357,9 @@ async function attemptSilentLogin() {
             console.log('[Main] Silent login successful!');
             silentLoginInProgress = false;
             store.set('sessionKey', sessionKey);
-            store.set('organizationId', orgId);
+            if (orgId) {
+              store.set('organizationId', orgId);
+            }
 
             if (mainWindow) {
               mainWindow.webContents.send('login-success', { sessionKey, organizationId: orgId });
@@ -567,25 +601,23 @@ ipcMain.on('toggle-graph', (event, visible) => {
 ipcMain.handle('fetch-usage-data', async () => {
   console.log('[Main] fetch-usage-data handler called');
   const sessionKey = store.get('sessionKey');
-  const organizationId = store.get('organizationId');
+  let organizationId = store.get('organizationId');
 
-  console.log('[Main] Credentials present:', !!sessionKey && !!organizationId);
+  console.log('[Main] Session key present:', !!sessionKey);
 
-  if (!sessionKey || !organizationId) {
+  if (!sessionKey) {
     throw new Error('Missing credentials');
   }
 
   try {
+    if (!organizationId) {
+      console.log('[Main] Organization ID missing, resolving from organizations API...');
+      organizationId = await resolveOrganizationId(sessionKey);
+      store.set('organizationId', organizationId);
+    }
+
     console.log('[Main] Making API request to usage endpoint');
-    const response = await axios.get(
-      `https://claude.ai/api/organizations/${organizationId}/usage`,
-      {
-        headers: {
-          'Cookie': `sessionKey=${sessionKey}`,
-          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-        }
-      }
-    );
+    const response = await fetchUsage(sessionKey, organizationId);
     console.log('[Main] API request successful, status:', response.status);
     storeUsageHistory(response.data);
     return response.data;
@@ -593,6 +625,23 @@ ipcMain.handle('fetch-usage-data', async () => {
     console.error('[Main] API request failed:', error.message);
     if (error.response) {
       console.error('[Main] Response status:', error.response.status);
+      if (error.response.status === 403) {
+        // Session may still be valid while org ID changed/staled out.
+        try {
+          console.log('[Main] 403 received, attempting to resolve organization ID and retry once...');
+          const freshOrgId = await resolveOrganizationId(sessionKey);
+          if (freshOrgId && freshOrgId !== organizationId) {
+            store.set('organizationId', freshOrgId);
+            const retryResponse = await fetchUsage(sessionKey, freshOrgId);
+            console.log('[Main] Retry with refreshed org ID succeeded, status:', retryResponse.status);
+            storeUsageHistory(retryResponse.data);
+            return retryResponse.data;
+          }
+        } catch (retryErr) {
+          console.error('[Main] Org re-resolve retry failed:', retryErr.message);
+        }
+      }
+
       if (error.response.status === 401 || error.response.status === 403) {
         // Session expired - attempt silent re-login
         console.log('[Main] Session expired, attempting silent re-login...');
