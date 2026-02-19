@@ -79,6 +79,30 @@ Right-click the tray icon for:
 - Re-login (if session expires)
 - Exit application
 
+### CLI (On-demand Usage Check)
+
+You can fetch usage once from the command line (no auto-refresh):
+
+```bash
+npm run cli -- --session-key "<your-session-key>"
+```
+
+Optional flags:
+
+```bash
+# force specific org
+npm run cli -- --session-key "<your-session-key>" --organization-id "<org-id>"
+
+# JSON output for scripts
+npm run cli -- --session-key "<your-session-key>" --json
+```
+
+You can also use environment variables:
+
+```bash
+CLAUDE_SESSION_KEY="<your-session-key>" npm run cli -- --json
+```
+
 ## Configuration
 
 Edit `config.json` in the app directory to customize:
