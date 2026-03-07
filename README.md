@@ -12,15 +12,41 @@ A beautiful, standalone desktop widget for **Windows and macOS** that displays y
 📊 **Visual Progress Bars** — Clean, gradient progress indicators with configurable warning thresholds
 ⏱️ **Countdown Timers** — Circular timers showing time elapsed in the current session window
 🔄 **Auto-refresh** — Updates every 5 minutes automatically
-🎨 **Modern UI** — Sleek, draggable widget with dark theme and rounded corners
+🎨 **Modern UI** — Sleek, draggable widget with dark and light themes
 🔒 **Secure** — Encrypted credential storage
 📍 **Always on Top** — User-controlled, stays visible across all workspaces
 💾 **System Tray** — Minimizes to tray for easy access
-⚙️ **Settings Panel** — Persistent preferences for startup, theme, tray, and thresholds
+⚙️ **Settings Panel** — Persistent preferences for startup, theme, tray, thresholds, and date/time formats
+🔔 **Update Notifications** — Automatic check for new releases on startup
+🕐 **Configurable Date & Time Formats** — 12h/24h time, and flexible weekly reset date display
 
 ---
 
 ## What's New
+
+### v1.5.0
+
+#### 🔔 Update Notifications
+The widget now checks for new releases automatically at startup. When a newer version is available, a dismissible banner appears below the title bar with a direct link to the releases page. The current version is also shown in the Settings panel, with an update link when applicable.
+
+#### 🕐 Configurable Date & Time Formats
+Two new settings in the Settings panel give you control over how reset times are displayed:
+
+**Time format** — controls the session "Resets At" column and any time shown in the weekly format:
+- `12h` — e.g. `3:59 PM` (default)
+- `24h` — e.g. `15:59`
+
+**Date format** — controls the weekly "Resets At" column:
+- `Mar 13` (default)
+- `Fri Mar 13`
+- `Fri Mar 13 + time` — combines date with your chosen time format
+
+#### 🐛 Bug Fixes & UI Improvements
+- Fixed Extra Usage row alignment to match the main widget grid
+- Update banner correctly expands and contracts the widget height when shown or dismissed
+- Settings panel height increased to accommodate new format options
+
+---
 
 ### Settings Panel
 
@@ -33,6 +59,8 @@ A full settings overlay with persistent preferences via electron-store.
 - 📌 **Hide from taskbar** — Tray-only mode
 - 🎨 **Theme selector** — Dark / Light / System
 - ⚠️ **Warning thresholds** — Configurable amber and red levels for usage bars
+- 🕐 **Time format** — 12h or 24h
+- 📅 **Date format** — Controls how the weekly reset date is displayed
 
 ### Improved Main Widget Layout
 
@@ -62,12 +90,12 @@ A full settings overlay with persistent preferences via electron-store.
 ### Download Pre-built Release
 
 **Windows:**
-1. Download the latest `Claude-Usage-Widget-Setup.exe` from [Releases](../../releases)
-2. Run the installer
-3. Launch "Claude Usage Widget" from the Start Menu
+1. Download the latest `Claude-Usage-Widget-{version}-win-Setup.exe` (installer) or `Claude-Usage-Widget-{version}-win-portable.exe` (no install needed) from [Releases](../../releases)
+2. Run the installer or portable exe
+3. Launch "Claude Usage Widget" from the Start Menu (installer) or directly (portable)
 
 **macOS:**
-1. Download the latest `Claude-Usage-Widget-arm64.dmg` (Apple Silicon) or `Claude-Usage-Widget-x64.dmg` (Intel) from [Releases](../../releases)
+1. Download the latest `Claude-Usage-Widget-{version}-macOS-arm64.dmg` (Apple Silicon) or `Claude-Usage-Widget-{version}-macOS-x64.dmg` (Intel) from [Releases](../../releases)
 2. Open the DMG and drag the app to your Applications folder
 3. Launch "Claude Usage Widget" from Applications
 
@@ -252,6 +280,8 @@ DEBUG_LOG=1 npm start
 - [x] Settings panel
 - [x] Remember window position
 - [x] Custom warning thresholds
+- [x] Configurable date & time formats
+- [x] Update notifications
 - [ ] Linux support
 - [ ] Usage history graphs
 - [ ] Compact mode
