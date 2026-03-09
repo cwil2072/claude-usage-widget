@@ -42,7 +42,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: Claude-Usage-Widget-linux-x64
-          path: dist/*x64*.AppImage
+          path: dist/*x86_64*.AppImage
           if-no-files-found: error
 
       - name: Upload arm64 AppImage
@@ -57,7 +57,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            dist/*x64*.AppImage
+            dist/*x86_64*.AppImage
             dist/*arm64*.AppImage
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
