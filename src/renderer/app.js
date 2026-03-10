@@ -523,11 +523,11 @@ function updateUI(data) {
         return;
     }
 
-    showMainContent();
+    if (!isCompactMode) showMainContent();
     buildExtraRows(data);
     refreshTimers();
     if (isExpanded) refreshExtraTimers();
-    resizeWidget();
+    if (!isCompactMode) resizeWidget();
     startCountdown();
 
     // Update compact bars in parallel if compact mode is active
