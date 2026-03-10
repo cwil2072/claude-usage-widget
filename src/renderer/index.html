@@ -105,8 +105,10 @@
             <!-- Main Content -->
             <div class="content" id="mainContent" style="display: none;">
 
-                <!-- Compact toggle chevron — left edge, collapses to compact mode -->
-                <button class="compact-collapse-btn" id="compactCollapseBtn" title="Compact mode">&#9664;</button>
+                <!-- Compact toggle chevron — fixed position, does not move with expand -->
+                <button class="compact-collapse-btn" id="compactCollapseBtn" title="Compact mode" style="display: none;">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="15 18 9 12 15 6"/></svg>
+                </button>
 
                 <!-- Column Headers -->
                 <div class="usage-headers">
@@ -159,7 +161,7 @@
 
                 <!-- Expand Toggle -->
                 <div class="expand-toggle" id="expandToggle">
-                    <svg class="expand-arrow" id="expandArrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <svg class="expand-arrow" id="expandArrow" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
                         <polyline points="6 9 12 15 18 9" />
                     </svg>
                 </div>
@@ -174,7 +176,9 @@
             <!-- Compact Content -->
             <div class="compact-content" id="compactContent" style="display: none;">
                 <!-- Expand chevron — right edge, returns to normal mode -->
-                <button class="compact-expand-btn" id="compactExpandBtn" title="Normal mode">&#9654;</button>
+                <button class="compact-expand-btn" id="compactExpandBtn" title="Normal mode">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="9 18 15 12 9 6"/></svg>
+                </button>
                 <div class="compact-rows">
                     <div class="compact-row">
                         <span class="compact-label">Session</span>

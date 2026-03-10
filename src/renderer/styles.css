@@ -1245,18 +1245,16 @@ body.theme-light .settings-select {
 
 /* ── Compact Mode ──────────────────────────────────────────── */
 
-/* Collapse chevron — left edge of normal view, vertically centered */
+/* Collapse chevron — fixed position in content area, does not move when rows expand */
 .compact-collapse-btn {
     position: absolute;
     left: 2px;
-    top: 50%;
-    transform: translateY(-50%);
-    width: 14px;
-    height: 28px;
+    top: 40px;  /* fixed offset within .content: centers on the two main rows */
+    width: 18px;
+    height: 36px;
     background: none;
     border: none;
     color: #505050;
-    font-size: 9px;
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -1275,7 +1273,7 @@ body.theme-light .settings-select {
     position: relative;
     display: flex;
     align-items: center;
-    padding: 10px 22px;
+    padding: 6px 22px;
     flex: 1;
 }
 
@@ -1285,12 +1283,11 @@ body.theme-light .settings-select {
     right: 2px;
     top: 50%;
     transform: translateY(-50%);
-    width: 14px;
-    height: 28px;
+    width: 18px;
+    height: 36px;
     background: none;
     border: none;
     color: #505050;
-    font-size: 9px;
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -1316,6 +1313,7 @@ body.theme-light .settings-select {
     display: flex;
     align-items: center;
     gap: 8px;
+    width: 100%;
 }
 
 .compact-label {
@@ -1324,20 +1322,19 @@ body.theme-light .settings-select {
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.4px;
-    width: 44px;
+    width: 50px;
     flex-shrink: 0;
 }
 
 .compact-bar-wrap {
     flex: 1;
-    display: flex;
-    align-items: center;
+    min-width: 0;
 }
 
 .compact-bar-bg {
     position: relative;
     height: 14px;
-    width: 140px;
+    width: 100%;
     background: rgba(255,255,255,0.08);
     border-radius: 4px;
     overflow: hidden;

@@ -1,0 +1,10 @@
+feat: compact mode complete
+
+- Compact view: 290x105px, two bars (Session + Weekly) with percentage centered
+- Left chevron collapses normal → compact, right chevron expands back
+- Chevron uses fixed pixel position inside .content so it never moves when extra rows expand
+- Refresh button hidden in compact mode to prevent resize conflicts
+- isExpanded reset when entering compact to prevent stale re-expand on refresh
+- Settings in compact mode shows minimal overlay (compact toggle + Done only)
+- Full settings compact toggle deferred to Done click (not immediate)
+- compactMode persisted in electron-store, restored on launch

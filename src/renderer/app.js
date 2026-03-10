@@ -105,6 +105,9 @@ async function init() {
     // Restore compact mode from saved settings
     if (settings.compactMode) {
         applyCompactMode(true);
+    } else {
+        // Ensure compact overlay is hidden in normal mode
+        if (elements.compactSettingsOverlay) elements.compactSettingsOverlay.style.display = 'none';
     }
 
     if (credentials.sessionKey && credentials.organizationId) {
@@ -183,7 +186,7 @@ function setupEventListeners() {
     elements.closeSettingsBtn.addEventListener('click', async () => {
         await saveSettings();
         elements.settingsOverlay.style.display = 'none';
-        resizeWidget();
+        if (!isCompactMode) resizeWidget();
     });
 
     elements.logoutBtn.addEventListener('click', async () => {
@@ -242,22 +245,11 @@ function setupEventListeners() {
         await _saveCompactSetting(false);
     });
 
-    // Compact mode toggle in normal settings panel
-    elements.compactModeToggle.addEventListener('change', async () => {
-        const compact = elements.compactModeToggle.checked;
-        applyCompactMode(compact);
-        await _saveCompactSetting(compact);
-    });
+    // Compact mode toggle in normal settings panel — deferred to Done click
 
-    // Compact mode toggle in compact settings panel
-    elements.compactModeToggleCompact.addEventListener('change', async () => {
-        const compact = elements.compactModeToggleCompact.checked;
-        applyCompactMode(compact);
-        await _saveCompactSetting(compact);
-        // Close compact settings if turning off
-        if (!compact) {
-            elements.compactSettingsOverlay.style.display = 'none';
-        }
+    // Compact mode toggle in compact settings panel — just updates the checkbox, Done applies it
+    elements.compactModeToggleCompact.addEventListener('change', () => {
+        // No immediate action — Done button reads this value and applies
     });
 
     // Settings button — open compact settings if in compact mode, full settings otherwise
@@ -272,8 +264,13 @@ function setupEventListeners() {
         }
     });
 
-    // Close compact settings
-    elements.closeCompactSettingsBtn.addEventListener('click', () => {
+    // Close compact settings — apply compact toggle value then close
+    elements.closeCompactSettingsBtn.addEventListener('click', async () => {
+        const compact = elements.compactModeToggleCompact.checked;
+        if (compact !== isCompactMode) {
+            applyCompactMode(compact);
+            await _saveCompactSetting(compact);
+        }
         elements.compactSettingsOverlay.style.display = 'none';
     });
 }
@@ -608,6 +605,23 @@ function applyCompactMode(compact) {
     elements.mainContent.style.display = compact ? 'none' : 'block';
     elements.compactContent.style.display = compact ? 'flex' : 'none';
 
+    // Collapse extra rows when entering compact — prevents stale isExpanded state
+    if (compact && isExpanded) {
+        isExpanded = false;
+        elements.expandArrow.classList.remove('expanded');
+        elements.expandSection.style.display = 'none';
+    }
+
+    // Show/hide the collapse chevron (only visible in normal mode with data)
+    if (elements.compactCollapseBtn) {
+        elements.compactCollapseBtn.style.display = compact ? 'none' : 'flex';
+    }
+
+    // Hide refresh button in compact mode (no room, and refresh causes resize issues)
+    if (elements.refreshBtn) {
+        elements.refreshBtn.style.display = compact ? 'none' : '';
+    }
+
     // Tell main process to resize the window width
     window.electronAPI.setCompactMode(compact);
 
@@ -904,6 +918,10 @@ function showMainContent() {
     elements.loginContainer.style.display = 'none';
     elements.noUsageContainer.style.display = 'none';
     elements.mainContent.style.display = 'block';
+    // Always show collapse chevron here — applyCompactMode hides it when needed
+    if (elements.compactCollapseBtn) {
+        elements.compactCollapseBtn.style.display = 'flex';
+    }
 }
 
 // Auto-update management
@@ -973,6 +991,12 @@ async function saveSettings() {
     warnThreshold = warn;
     dangerThreshold = danger;
 
+    // Apply compact mode change first, then include in saved settings
+    const compactToggleValue = elements.compactModeToggle.checked;
+    if (compactToggleValue !== isCompactMode) {
+        applyCompactMode(compactToggleValue);
+    }
+
     const settings = {
         autoStart: elements.autoStartToggle.checked,
         minimizeToTray: elements.minimizeToTrayToggle.checked,
@@ -983,7 +1007,7 @@ async function saveSettings() {
         timeFormat: elements.timeFormat.value || '12h',
         weeklyDateFormat: elements.weeklyDateFormat.value || 'date',
         usageAlerts: elements.usageAlertsToggle.checked,
-        compactMode: isCompactMode
+        compactMode: isCompactMode  // use updated value after applyCompactMode
     };
     await window.electronAPI.saveSettings(settings);
     window._cachedSettings = settings;
