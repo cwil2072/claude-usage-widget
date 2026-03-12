@@ -342,10 +342,28 @@ async function attemptSilentLogin() {
       width: 800,
       height: 700,
       show: false, // Hidden window
+      focusable: false,
+      skipTaskbar: true,
+      movable: false,
+      minimizable: false,
+      maximizable: false,
+      resizable: false,
       webPreferences: {
         nodeIntegration: false,
         contextIsolation: true
       }
+    });
+
+    // Keep silent-login browser hidden even if a page tries to surface it.
+    silentLoginWindow.on('show', () => {
+      if (silentLoginWindow && !silentLoginWindow.isDestroyed()) {
+        silentLoginWindow.hide();
+      }
+    });
+
+    silentLoginWindow.webContents.setWindowOpenHandler(({ url }) => {
+      console.log('[Main] Silent login blocked popup window:', url);
+      return { action: 'deny' };
     });
 
     silentLoginWindow.loadURL('https://claude.ai');
