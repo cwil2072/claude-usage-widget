@@ -383,6 +383,16 @@ function hasNoUsage(data) {
 }
 
 // Update UI with usage data
+// Format a cent-based amount with the correct currency symbol.
+// Known unambiguous symbols are used; everything else falls back to the
+// ISO 4217 code as a suffix so the display is always correct.
+function formatCurrency(amountCents, currencyCode) {
+  const amount = (amountCents / 100).toFixed(0);
+  const symbols = { USD: '$', EUR: '€', GBP: '£' };
+  const sym = symbols[currencyCode];
+  return sym ? `${sym}${amount}` : `${amount} ${currencyCode || 'USD'}`;
+}
+
 // Extra row label mapping for API fields
 const EXTRA_ROW_CONFIG = {
     seven_day_sonnet: { label: 'Sonnet (7d)', color: 'weekly' },
@@ -417,7 +427,7 @@ function buildExtraRows(data) {
                     <div class="progress-bar">
                         <div class="progress-fill ${colorClass}" style="width: ${Math.min(utilization, 100)}%"></div>
                     </div>
-                    <span class="usage-percentage extra-spending">$${(value.used_cents/100).toFixed(0)}/$${(value.limit_cents/100).toFixed(0)}</span>
+                    <span class="usage-percentage extra-spending">${formatCurrency(value.used_cents, value.currency)}/${formatCurrency(value.limit_cents, value.currency)}</span>
                    </div>`
                 : `<div class="usage-bar-group">
                     <div class="progress-bar">
@@ -431,7 +441,7 @@ function buildExtraRows(data) {
                     ? `<span class="extra-status off">OFF</span>`
                     : '';
             const balanceHTML = value.balance_cents != null
-                ? `<span class="timer-text extra-balance">${statusTag} Bal $${(value.balance_cents/100).toFixed(0)}</span>`
+                ? `<span class="timer-text extra-balance">${statusTag} Bal ${formatCurrency(value.balance_cents, value.currency)}</span>`
                 : statusTag
                     ? `<span class="timer-text extra-balance">${statusTag}</span>`
                     : `<span class="timer-text"></span>`;

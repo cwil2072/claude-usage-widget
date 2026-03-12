@@ -482,11 +482,13 @@ ipcMain.handle('fetch-usage-data', async () => {
         used_cents: used,
         limit_cents: limit,
         is_enabled: true,
+        currency: overage.currency || 'USD',
       };
     } else if (!enabled) {
       // Extra usage is off — still pass the flag so the renderer can show status
       if (!data.extra_usage) data.extra_usage = {};
       data.extra_usage.is_enabled = false;
+      data.extra_usage.currency = overage.currency || 'USD';
     }
   } else {
     debugLog('Overage fetch skipped or failed:', overageResult.reason?.message || 'no data');
@@ -498,6 +500,10 @@ ipcMain.handle('fetch-usage-data', async () => {
     if (typeof prepaid.amount === 'number') {
       if (!data.extra_usage) data.extra_usage = {};
       data.extra_usage.balance_cents = prepaid.amount;
+      // Use prepaid currency if overage didn't already set one
+      if (!data.extra_usage.currency && prepaid.currency) {
+        data.extra_usage.currency = prepaid.currency;
+      }
     }
   } else {
     debugLog('Prepaid fetch skipped or failed:', prepaidResult.reason?.message || 'no data');
