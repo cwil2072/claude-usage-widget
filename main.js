@@ -94,7 +94,9 @@ function createTray() {
         label: 'Show Widget',
         click: () => {
           if (mainWindow) {
+            if (mainWindow.isMinimized()) mainWindow.restore();
             mainWindow.show();
+            mainWindow.focus();
           } else {
             createMainWindow();
           }
@@ -142,7 +144,13 @@ function createTray() {
 
     tray.on('click', () => {
       if (mainWindow) {
-        mainWindow.isVisible() ? mainWindow.hide() : mainWindow.show();
+        if (mainWindow.isVisible() && !mainWindow.isMinimized()) {
+          mainWindow.hide();
+        } else {
+          if (mainWindow.isMinimized()) mainWindow.restore();
+          mainWindow.show();
+          mainWindow.focus();
+        }
       }
     });
   } catch (error) {
@@ -216,7 +224,15 @@ ipcMain.handle('validate-session-key', async (event, sessionKey) => {
 });
 
 ipcMain.on('minimize-window', () => {
-  if (mainWindow) mainWindow.hide();
+  if (mainWindow) {
+    // macOS: minimize to Dock so the user can restore via Dock click
+    // Windows/Linux: hide to tray (taskbar may be hidden, tray is the restore path)
+    if (process.platform === 'darwin') {
+      mainWindow.minimize();
+    } else {
+      mainWindow.hide();
+    }
+  }
 });
 
 ipcMain.on('close-window', () => {
@@ -545,6 +561,10 @@ app.on('window-all-closed', () => {
 app.on('activate', () => {
   if (mainWindow === null) {
     createMainWindow();
+  } else {
+    if (mainWindow.isMinimized()) mainWindow.restore();
+    mainWindow.show();
+    mainWindow.focus();
   }
 });
 
