@@ -22,6 +22,16 @@ Claude Usage Widget is an Electron desktop app for monitoring Claude.ai usage on
 - `npm run build:win`: Build Windows artifacts.
 - `npm run build:linux`: Build Linux artifacts.
 
+## Branch Workflow
+
+- Start new work from `develop`, not `main`.
+- Before creating a feature branch, sync local `develop` with upstream:
+  - `git switch develop`
+  - `git fetch upstream`
+  - `git pull --ff-only upstream develop`
+- Create a fresh feature branch from updated `develop`.
+- Open contribution PRs against `upstream/develop`.
+
 ## Working Notes
 
 - Use Node.js 18+ and npm 9+.
